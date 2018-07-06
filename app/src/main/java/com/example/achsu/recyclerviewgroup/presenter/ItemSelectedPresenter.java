@@ -23,7 +23,6 @@ public class ItemSelectedPresenter implements ItemSelectedContractor.Presenter {
 
     private int itemListMaxSize = DEFAULT_SIZE;
     private Map<String, LinkedHashMap<String, String>> modelMap = new HashMap<>();
-    private List<Model> modelList = new ArrayList<>();
 
     private PublishSubject<Model> insertDataSubject = PublishSubject.create();
     private PublishSubject<Model> removeDataSubject = PublishSubject.create();
@@ -99,13 +98,11 @@ public class ItemSelectedPresenter implements ItemSelectedContractor.Presenter {
 
     @Override
     public void addData(Model data) {
-        if (!checkSelectedOverSize(modelList.size() + 1)) {
-            modelList.add(data);
+        if (!checkSelectedOverSize(getDataSize() + 1)) {
             if (data instanceof ChildModel) {
                 ChildModel childModel = ((ChildModel)data);
                 handleAddMapData(childModel);
             }
-
             notifyListChange();
         }
     }
@@ -113,41 +110,37 @@ public class ItemSelectedPresenter implements ItemSelectedContractor.Presenter {
     @Override
     public void removeData(Model data) {
 
-        if (!checkSelectedOverSize(modelList.size() - 1)) {
-            modelList.remove(data);
+        if (!checkSelectedOverSize(getDataSize() - 1)) {
             if (data instanceof ChildModel) {
                 ChildModel childModel = ((ChildModel) data);
                 handleRemoveMapData(childModel);
             }
-
             notifyListChange();
         }
 
     }
 
     public void handleData(Model data) {
-        if (!isContainData(data)) {
-            addData(data);
-        } else {
-            removeData(data);
+        if (data instanceof ChildModel) {
+            ChildModel childModel = (ChildModel) data;
+            if (!isContainMap(childModel)) {
+                addData(data);
+            } else {
+                removeData(data);
+            }
         }
     }
 
-    private boolean isContainData(Model data) {
-        boolean isContainData = false;
-        if (modelList != null) {
-            for (Model item : modelList) {
-                if (item.getValue().equals(data.getValue())) {
-                    isContainData = true;
-                    break;
+    private int getDataSize() {
+        int size = 0;
+        if (modelMap != null && !modelMap.isEmpty()) {
+            for (LinkedHashMap<String, String> dataMap : modelMap.values()) {
+                if (dataMap != null) {
+                    size += dataMap.size();
                 }
             }
         }
-        return isContainData;
-    }
-
-    public List<Model> getModelList() {
-        return modelList;
+        return size;
     }
 
     public boolean isContainMap(ChildModel childModel) {

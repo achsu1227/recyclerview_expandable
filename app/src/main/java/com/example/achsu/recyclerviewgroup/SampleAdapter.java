@@ -275,13 +275,13 @@ public class SampleAdapter<T extends Model> extends RecyclerView.Adapter<SampleA
                 @Override
                 public void onClick(View v) {
                     ChildModel childModel = ((ChildModel)model);
-                    childModel.setName(childModel.getName() + "1");
+                    //childModel.setName(childModel.getName() + "1");
 
                     if (mItemSelectedView != null) {
                         mItemSelectedView.onItemClick(getAdapterPosition(), model);
                     }
 
-                    setName(childModel);
+                    //setName(childModel);
                 }
             });
 
