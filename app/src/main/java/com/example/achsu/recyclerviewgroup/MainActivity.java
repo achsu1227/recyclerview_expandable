@@ -71,7 +71,12 @@ public class MainActivity extends AppCompatActivity implements ItemSelectedContr
 
         ArrayList<ChildModel> childModels = new ArrayList<>();
         for (int index = 0 ; index < 5; index++) {
-            childModels.add(new ChildModel("child " + index, index + ""));
+            if (index == 0) {
+                childModels.add(new ChildModel.Builder("child " + index, index + "")
+                        .addSelectType(ChildModel.SelectType.Single).build());
+            } else {
+                childModels.add(new ChildModel("child " + index, index + ""));
+            }
         }
         groupModel.setList(childModels);
 
@@ -83,7 +88,12 @@ public class MainActivity extends AppCompatActivity implements ItemSelectedContr
         GroupModel<ChildModel> groupModel1 = new GroupModel("group2", "111");
         ArrayList<ChildModel> childModels1 = new ArrayList<>();
         for (int index = 0 ; index < 5; index++) {
-            childModels1.add(new ChildModel("child " + index, index + ""));
+            if (index == 0) {
+                childModels1.add(new ChildModel.Builder("child " + index, index + "")
+                        .addSelectType(ChildModel.SelectType.Single).build());
+            } else {
+                childModels1.add(new ChildModel("child " + index, index + ""));
+            }
         }
         groupModel1.setList(childModels1);
         list.add(groupModel1);

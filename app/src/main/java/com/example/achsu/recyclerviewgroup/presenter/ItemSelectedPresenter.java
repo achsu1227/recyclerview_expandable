@@ -18,11 +18,13 @@ import io.reactivex.functions.Consumer;
 import io.reactivex.subjects.PublishSubject;
 
 public class ItemSelectedPresenter implements ItemSelectedContractor.Presenter {
-    public static final int DEFAULT_SIZE = 3;
+    public static final int DEFAULT_SIZE = 5;
     private ItemSelectedContractor.View mItemSelectedView;
 
     private int itemListMaxSize = DEFAULT_SIZE;
-    private Map<String, LinkedHashMap<String, String>> modelMap = new HashMap<>();
+    private Map<String, LinkedHashMap<String, String>> selectedDataMap = new HashMap<>();
+
+    private Map<String, String> selectedSingleTypeItems = new HashMap<>();
 
     private PublishSubject<Model> insertDataSubject = PublishSubject.create();
     private PublishSubject<Model> removeDataSubject = PublishSubject.create();
@@ -82,13 +84,43 @@ public class ItemSelectedPresenter implements ItemSelectedContractor.Presenter {
         //compositeDisposable.clear();
     }
 
-    private boolean checkSelectedOverSize(int size) {
+    private boolean checkSelectedOverSize(Model data, int size) {
+        if (data instanceof ChildModel) {
+            ChildModel childModel = (ChildModel) data;
+            // 如果是單選通過條件
+            if (ChildModel.SelectType.Single.equals(childModel.getSelectType())) {
+                if (selectedDataMap.get(childModel.getParentId()) != null
+                        && selectedDataMap.get(childModel.getParentId()).size() > 0) {
+                    return false;
+                }
+            }
+            // 如果有單選通過條件
+            if (!selectedSingleTypeItems.isEmpty()) {
+                if (selectedSingleTypeItems.containsKey(childModel.getParentId())) {
+                    return false;
+                }
+            }
+        }
+
         if (size > itemListMaxSize
                 || size < 0) {
             mItemSelectedView.showToast("max");
             return true;
         }
         return false;
+    }
+
+    private boolean checkChildItemIsSingleType(Model data) {
+        if (data instanceof ChildModel) {
+            ChildModel childModel = (ChildModel) data;
+            if (ChildModel.SelectType.Single.equals(childModel.getSelectType())) {
+                if (selectedDataMap.get(childModel.getParentId()) != null
+                        && selectedDataMap.get(childModel.getParentId()).size() > 0) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     @Override
@@ -98,7 +130,7 @@ public class ItemSelectedPresenter implements ItemSelectedContractor.Presenter {
 
     @Override
     public void addData(Model data) {
-        if (!checkSelectedOverSize(getDataSize() + 1)) {
+        if (!checkSelectedOverSize(data, getDataSize() + 1)) {
             if (data instanceof ChildModel) {
                 ChildModel childModel = ((ChildModel)data);
                 handleAddMapData(childModel);
@@ -109,15 +141,13 @@ public class ItemSelectedPresenter implements ItemSelectedContractor.Presenter {
 
     @Override
     public void removeData(Model data) {
-
-        if (!checkSelectedOverSize(getDataSize() - 1)) {
+        if (!checkSelectedOverSize(data, getDataSize() - 1)) {
             if (data instanceof ChildModel) {
                 ChildModel childModel = ((ChildModel) data);
                 handleRemoveMapData(childModel);
             }
             notifyListChange();
         }
-
     }
 
     public void handleData(Model data) {
@@ -133,8 +163,8 @@ public class ItemSelectedPresenter implements ItemSelectedContractor.Presenter {
 
     private int getDataSize() {
         int size = 0;
-        if (modelMap != null && !modelMap.isEmpty()) {
-            for (LinkedHashMap<String, String> dataMap : modelMap.values()) {
+        if (selectedDataMap != null && !selectedDataMap.isEmpty()) {
+            for (LinkedHashMap<String, String> dataMap : selectedDataMap.values()) {
                 if (dataMap != null) {
                     size += dataMap.size();
                 }
@@ -143,10 +173,15 @@ public class ItemSelectedPresenter implements ItemSelectedContractor.Presenter {
         return size;
     }
 
+    /**
+     * 是否有包含在資料集內.
+     * @param childModel ChildModel
+     * @return boolean
+     */
     public boolean isContainMap(ChildModel childModel) {
         boolean containResult = false;
-        if (modelMap.containsKey(childModel.getParentId())) {
-            LinkedHashMap dataSet = modelMap.get(childModel.getParentId());
+        if (selectedDataMap.containsKey(childModel.getParentId())) {
+            LinkedHashMap dataSet = selectedDataMap.get(childModel.getParentId());
             if (dataSet != null) {
                 containResult = dataSet.containsKey(childModel.getValue());
             }
@@ -155,20 +190,40 @@ public class ItemSelectedPresenter implements ItemSelectedContractor.Presenter {
     }
 
     private void handleAddMapData(ChildModel childModel) {
-        if (modelMap.containsKey(childModel.getParentId())) {
-            modelMap.get(childModel.getParentId()).put(childModel.getValue(), childModel.getName());
+        if (selectedDataMap.containsKey(childModel.getParentId())) {
+            handleSingChildItem(childModel);
+            selectedDataMap.get(childModel.getParentId()).put(childModel.getValue(), childModel.getName());
         } else {
-            modelMap.put(childModel.getParentId(), new LinkedHashMap<String, String>());
-            modelMap.get(childModel.getParentId()).put(childModel.getValue(), childModel.getName());
+            selectedDataMap.put(childModel.getParentId(), new LinkedHashMap<String, String>());
+            selectedDataMap.get(childModel.getParentId()).put(childModel.getValue(), childModel.getName());
+        }
+    }
+
+    private void handleSingChildItem(ChildModel childModel) {
+        if (ChildModel.SelectType.Single.equals(childModel.getSelectType())) {
+            selectedSingleTypeItems.put(childModel.getParentId(), childModel.getValue());
+            selectedDataMap.get(childModel.getParentId()).clear();
+        } else {
+            if (!selectedSingleTypeItems.isEmpty()) {
+                selectedDataMap.get(childModel.getParentId()).clear();
+                selectedSingleTypeItems.remove(childModel.getParentId());
+            }
         }
     }
 
     private void handleRemoveMapData(ChildModel childModel) {
-        if (modelMap.containsKey(childModel.getParentId())) {
-            modelMap.get(childModel.getParentId()).remove(childModel.getValue());
+        if (selectedDataMap.containsKey(childModel.getParentId())) {
+            handleRemoveSelectedSingleTyoeItems(childModel);
+            selectedDataMap.get(childModel.getParentId()).remove(childModel.getValue());
         } else {
-            modelMap.put(childModel.getParentId(), new LinkedHashMap<String, String>());
-            modelMap.get(childModel.getParentId()).remove(childModel.getValue());
+            selectedDataMap.put(childModel.getParentId(), new LinkedHashMap<String, String>());
+            selectedDataMap.get(childModel.getParentId()).remove(childModel.getValue());
+        }
+    }
+
+    private void handleRemoveSelectedSingleTyoeItems(ChildModel childModel) {
+        if (ChildModel.SelectType.Single.equals(childModel.getSelectType())) {
+            selectedSingleTypeItems.remove(childModel.getParentId());
         }
     }
 }
