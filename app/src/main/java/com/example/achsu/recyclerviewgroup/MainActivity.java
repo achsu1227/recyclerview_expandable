@@ -11,21 +11,40 @@ import android.support.v7.util.ListUpdateCallback;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.widget.Toast;
 
+import com.example.achsu.recyclerviewgroup.contract.ItemSelectedContractor;
 import com.example.achsu.recyclerviewgroup.model.ChildModel;
 import com.example.achsu.recyclerviewgroup.model.GroupModel;
 import com.example.achsu.recyclerviewgroup.model.Model;
+import com.example.achsu.recyclerviewgroup.presenter.ItemSelectedPresenter;
 
-public class MainActivity extends AppCompatActivity {
+import io.reactivex.functions.Consumer;
+
+public class MainActivity extends AppCompatActivity implements ItemSelectedContractor.View {
+
+    private ItemSelectedPresenter mItemSelectedPresenter;
+    private SampleAdapter sampleAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        setItemSelectedPresenter();
         setToolBar();
         setRecyclerView();
 
+    }
+
+    private void setItemSelectedPresenter() {
+        mItemSelectedPresenter = new ItemSelectedPresenter(this, ItemSelectedPresenter.DEFAULT_SIZE);
+        mItemSelectedPresenter.subscribe(new Consumer() {
+            @Override
+            public void accept(Object o) throws Exception {
+                sampleAdapter.notifyDataSetChanged();
+            }
+        });
     }
 
     private void setToolBar() {
@@ -40,6 +59,13 @@ public class MainActivity extends AppCompatActivity {
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
+        sampleAdapter = new SampleAdapter(this, getData(), mItemSelectedPresenter);
+        //sampleAdapter.setItemSelectedPresenter(mItemSelectedPresenter);
+        sampleAdapter.setItemSelectedView(this);
+        recyclerView.setAdapter(sampleAdapter);
+    }
+
+    private ArrayList<Model> getData() {
         ArrayList<Model> list = new ArrayList();
         GroupModel<ChildModel> groupModel = new GroupModel("group1", "000");
 
@@ -66,7 +92,20 @@ public class MainActivity extends AppCompatActivity {
         list.add(new ChildModel("child 22", "22"));
         list.add(new ChildModel("child 33", "33"));
 
-        SampleAdapter sampleAdapter = new SampleAdapter(this, list);
-        recyclerView.setAdapter(sampleAdapter);
+        return list;
     }
+
+    @Override
+    public void showToast(String msg) {
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onItemClick(int position, Model data) {
+        if (data instanceof ChildModel) {
+            mItemSelectedPresenter.handleData(data);
+            sampleAdapter.notifyDataSetChanged();
+        }
+    }
+
 }
