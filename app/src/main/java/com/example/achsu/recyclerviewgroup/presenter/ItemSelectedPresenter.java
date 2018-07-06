@@ -205,8 +205,10 @@ public class ItemSelectedPresenter implements ItemSelectedContractor.Presenter {
             selectedDataMap.get(childModel.getParentId()).clear();
         } else {
             if (!selectedSingleTypeItems.isEmpty()) {
-                selectedDataMap.get(childModel.getParentId()).clear();
-                selectedSingleTypeItems.remove(childModel.getParentId());
+                if (selectedSingleTypeItems.containsKey(childModel.getParentId())) {
+                    selectedDataMap.get(childModel.getParentId()).clear();
+                    selectedSingleTypeItems.remove(childModel.getParentId());
+                }
             }
         }
     }
